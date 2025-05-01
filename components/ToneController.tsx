@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from "react";
-import ScrambleText from "./commons/ScrambleText";
 import ToneChangerGrid from "./ToneChangerGrid";
 import useToneStore, { Tone } from "../store/toneStore";
 import { Undo2, Redo2, RefreshCw, Send, Copy } from "lucide-react";
@@ -12,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import ReactMarkdown from 'react-markdown';
 
-const ToneAdjuster: React.FC = () => {
+const ToneController: React.FC = () => {
   const {
     inputText,
     outputText,
@@ -251,4 +250,4 @@ const ToneAdjuster: React.FC = () => {
   );
 };
 
-export default ToneAdjuster;
+export default ToneController;

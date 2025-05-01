@@ -116,12 +116,13 @@ const ToneChangerGrid = ({ onToneChange }) => {
   const getLabelOpacity = (tone) => {
     const cond = {
       professional: position.y < 50,
-      casual: position.y >= 50,
+      casual: position.y > 50,
       concise: position.x < 50,
-      expanded: position.x >= 50,
+      expanded: position.x > 50,
     };
     return cond[tone] ? "opacity-100 font-bold" : "opacity-50";
   };
+
   // Cell highlight
   const getQuadrantHighlight = (q) => {
     const p = position;
