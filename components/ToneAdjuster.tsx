@@ -181,18 +181,14 @@ const ToneAdjuster: React.FC = () => {
               >
                 <div className="relative flex-grow h-64 p-4 border border-slate-700 bg-slate-900 text-slate-100 rounded-md overflow-auto">
                   {isLoading ? (
-                    // Centered spinner overlay
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
                       <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full" />
                     </div>
                   ) : (
-                    // Once loaded, show the rendered Markdown
                     <ReactMarkdown>
                       {outputText}
                     </ReactMarkdown>
                   )}
-
-                  {/* Copy button stays visible once not loading */}
                   {outputText && !isLoading && (
                     <Button
                       variant="ghost"
@@ -207,13 +203,12 @@ const ToneAdjuster: React.FC = () => {
               </TabsContent>
             )}
 
-
           </Tabs>
 
         </CardContent>
 
         <CardFooter className="px-4 py-3 flex flex-col gap-3 border-t border-slate-800">
-          <div className="flex flex-wrap gap-2 w-full">
+          <div className="flex flex-wrap h-8 gap-2 w-full">
             {activeTones.length > 0 ? (
               activeTones.map((tone, index) => (
                 <Badge key={index} variant="secondary" className="bg-slate-800 hover:bg-slate-700 text-slate-200">
@@ -228,7 +223,7 @@ const ToneAdjuster: React.FC = () => {
           <Button
             onClick={adjustText}
             disabled={isLoading || !pendingAdjustment || inputText.length <= 3 || tones.length === 0}
-            className={`w-full ${pendingAdjustment ? 'animate-pulse bg-indigo-600 hover:bg-indigo-700' : ''}`}
+            className={`w-full ${pendingAdjustment ? 'animate-pulse bg-indigo-500 hover:bg-indigo-600' : ''}`}
           >
             <Send className="h-4 w-4 mr-2" />
             {isLoading ? 'Adjusting...' : 'Adjust Text'}

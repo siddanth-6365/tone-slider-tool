@@ -9,7 +9,6 @@ function Home() {
         <Header />
         <ToneAdjuster />
       </div>
-
       <Toaster />
     </div>
   );

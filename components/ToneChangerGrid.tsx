@@ -7,23 +7,33 @@ const ToneChangerGrid = ({ onToneChange }) => {
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    if (tones.length > 0) {
-      const expandedTone = tones.find(t => t.tone === "expanded");
-      const casualTone = tones.find(t => t.tone === "casual");
-      
-      const expandedWeight = expandedTone ? expandedTone.weight : 0;
-      const casualWeight = casualTone ? casualTone.weight : 0;
-      
-      if (expandedWeight > 0 || casualWeight > 0) {
-        setPosition({
-          x: expandedWeight * 100,
-          y: casualWeight * 100
-        });
-      } else if (tones.length === 0) {
-        setPosition({ x: 50, y: 50 });
-      }
-    } else {
+    if (tones.length === 0) {
       setPosition({ x: 50, y: 50 });
+    } else {
+      // Reconstruct grid cell from tones
+      const toneMap = tones.reduce(
+        (acc, { tone, weight }) => ({ ...acc, [tone]: weight }),
+        { concise: 0, casual: 0, professional: 0, expanded: 0 }
+      );
+      let row, col;
+
+      if (toneMap.professional === 1) { row = 0; col = 1; }
+      else if (toneMap.casual === 1) { row = 2; col = 1; }
+      else if (toneMap.concise === 1) { row = 1; col = 0; }
+      else if (toneMap.expanded === 1) { row = 1; col = 2; }
+
+      else if (toneMap.professional > 0 && toneMap.concise > 0) { row = 0; col = 0; }
+      else if (toneMap.professional > 0 && toneMap.expanded > 0) { row = 0; col = 2; }
+      else if (toneMap.casual > 0 && toneMap.concise > 0) { row = 2; col = 0; }
+      else if (toneMap.casual > 0 && toneMap.expanded > 0) { row = 2; col = 2; }
+      else {
+        const x = toneMap.expanded * 100;
+        const y = toneMap.casual * 100;
+        setPosition({ x, y });
+        return;
+      }
+      const cellSize = 100 / 3;
+      setPosition({ x: (col + 0.5) * cellSize, y: (row + 0.5) * cellSize });
     }
   }, [tones]);
 
@@ -31,38 +41,33 @@ const ToneChangerGrid = ({ onToneChange }) => {
     setIsDragging(true);
     updatePosition(e);
   };
-
+  const handleMouseMove = (e) => { if (isDragging) updatePosition(e); };
   const handleMouseUp = () => {
     setIsDragging(false);
-    if (isInCenterCell()) {
+    const { row, col } = getCell(position.x, position.y);
+    const weights = calculateWeights(row, col);
+
+    if (row === 1 && col === 1) {
       setPosition({ x: 50, y: 50 });
       onToneChange([]);
-    } else {
-      onToneChange(getTones());
+      return;
     }
+
+    const cellSize = 100 / 3;
+    setPosition({ x: (col + 0.5) * cellSize, y: (row + 0.5) * cellSize });
+
+    const result = Object.entries(weights)
+      .filter(([_, w]) => w > 0)
+      .map(([tone, w]) => ({ tone, weight: parseFloat((w).toFixed(2)) }))
+      .sort((a, b) => b.weight - a.weight);
+
+    onToneChange(result);
   };
 
-  const handleMouseMove = (e) => {
-    if (isDragging) {
-      updatePosition(e);
-    }
-  };
 
-  const handleTouchStart = (e) => {
-    setIsDragging(true);
-    updatePositionTouch(e);
-  };
-
-  const handleTouchMove = (e) => {
-    if (isDragging) {
-      updatePositionTouch(e);
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    handleMouseUp();
-  };
+  const handleTouchStart = (e) => { setIsDragging(true); updatePositionTouch(e); };
+  const handleTouchMove = (e) => { if (isDragging) { updatePositionTouch(e); e.preventDefault(); } };
+  const handleTouchEnd = () => { handleMouseUp(); };
 
   const updatePosition = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -70,7 +75,6 @@ const ToneChangerGrid = ({ onToneChange }) => {
     const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height);
     setPosition({ x: (x / rect.width) * 100, y: (y / rect.height) * 100 });
   };
-
   const updatePositionTouch = (e) => {
     if (e.touches && e.touches[0]) {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -80,64 +84,59 @@ const ToneChangerGrid = ({ onToneChange }) => {
     }
   };
 
-  const isInCenterCell = () => {
-    return (
-      position.x > 33.33 &&
-      position.x < 66.66 &&
-      position.y > 33.33 &&
-      position.y < 66.66
-    );
+  const getCell = (xPct, yPct) => {
+    const idx = val => Math.min(2, Math.floor(val / (100 / 3)));
+    return { row: idx(yPct), col: idx(xPct) };
   };
 
-  const getTones = () => {
-    const conciseWeight = 1 - position.x / 100;
-    const casualWeight = position.y / 100;
-    const professionalWeight = 1 - casualWeight;
-    const expandedWeight = position.x / 100;
+  const calculateWeights = (row, col) => {
+    const w = { concise: 0, casual: 0, professional: 0, expanded: 0 };
+    if (row === 1 && col === 1) return w;
 
-    const getWeight = (weight) => {
-      return isInCenterCell() ? 0 : parseFloat(weight.toFixed(2));
-    };
-
-    const tones = [
-      { tone: "concise", weight: getWeight(conciseWeight) },
-      { tone: "casual", weight: getWeight(casualWeight) },
-      { tone: "professional", weight: getWeight(professionalWeight) },
-      { tone: "expanded", weight: getWeight(expandedWeight) },
-    ];
-
-    return tones.filter(t => t.weight > 0).sort((a, b) => b.weight - a.weight);
+    // Top row -> professional
+    if (row === 0) {
+      if (col === 1) w.professional = 1;
+      if (col === 0) { w.professional = 0.5; w.concise = 0.5; }
+      if (col === 2) { w.professional = 0.5; w.expanded = 0.5; }
+    }
+    // Middle row -> concise/expanded
+    if (row === 1) {
+      if (col === 0) w.concise = 1;
+      if (col === 2) w.expanded = 1;
+    }
+    // Bottom row -> casual
+    if (row === 2) {
+      if (col === 1) w.casual = 1;
+      if (col === 0) { w.casual = 0.5; w.concise = 0.5; }
+      if (col === 2) { w.casual = 0.5; w.expanded = 0.5; }
+    }
+    return w;
   };
 
-  const getLabelOpacity = (quadrant) => {
-    const thresholds = {
+  const getLabelOpacity = (tone) => {
+    const cond = {
       professional: position.y < 50,
       casual: position.y >= 50,
       concise: position.x < 50,
       expanded: position.x >= 50,
     };
-    
-    if (thresholds[quadrant]) {
-      return thresholds[quadrant] ? "opacity-100 font-bold" : "opacity-50";
-    }
-    
-    return "opacity-50";
+    return cond[tone] ? "opacity-100 font-bold" : "opacity-50";
   };
-
-  const getQuadrantHighlight = (quadrant) => {
-    const isActive = {
-      topLeft: position.x < 33.33 && position.y < 33.33,
-      topCenter: position.x >= 33.33 && position.x <= 66.66 && position.y < 33.33,
-      topRight: position.x > 66.66 && position.y < 33.33,
-      middleLeft: position.x < 33.33 && position.y >= 33.33 && position.y <= 66.66,
-      center: isInCenterCell(),
-      middleRight: position.x > 66.66 && position.y >= 33.33 && position.y <= 66.66,
-      bottomLeft: position.x < 33.33 && position.y > 66.66,
-      bottomCenter: position.x >= 33.33 && position.x <= 66.66 && position.y > 66.66,
-      bottomRight: position.x > 66.66 && position.y > 66.66,
+  // Cell highlight
+  const getQuadrantHighlight = (q) => {
+    const p = position;
+    const on = {
+      topLeft: p.x < 33.33 && p.y < 33.33,
+      topCenter: p.x >= 33.33 && p.x <= 66.66 && p.y < 33.33,
+      topRight: p.x > 66.66 && p.y < 33.33,
+      middleLeft: p.x < 33.33 && p.y >= 33.33 && p.y <= 66.66,
+      center: p.x > 33.33 && p.x < 66.66 && p.y > 33.33 && p.y < 66.66,
+      middleRight: p.x > 66.66 && p.y >= 33.33 && p.y <= 66.66,
+      bottomLeft: p.x < 33.33 && p.y > 66.66,
+      bottomCenter: p.x >= 33.33 && p.x <= 66.66 && p.y > 66.66,
+      bottomRight: p.x > 66.66 && p.y > 66.66,
     };
-
-    return isActive[quadrant] ? "bg-slate-700/30" : "";
+    return on[q] ? "bg-slate-700/30" : "";
   };
 
   return (
@@ -145,13 +144,14 @@ const ToneChangerGrid = ({ onToneChange }) => {
       <div
         className="relative w-full h-full cursor-pointer"
         onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        {/* 3x3 grid */}
         <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
           <div className={`border border-slate-700/50 ${getQuadrantHighlight("topLeft")}`} />
           <div className={`border border-slate-700/50 ${getQuadrantHighlight("topCenter")}`} />
@@ -163,47 +163,25 @@ const ToneChangerGrid = ({ onToneChange }) => {
           <div className={`border border-slate-700/50 ${getQuadrantHighlight("bottomCenter")}`} />
           <div className={`border border-slate-700/50 ${getQuadrantHighlight("bottomRight")}`} />
         </div>
-        
-        <div className="absolute top-0 left-0 w-full h-full text-xs font-medium text-slate-300 flex items-center justify-center pointer-events-none">
-          <span
-            className={`absolute top-3 left-1/2 transform -translate-x-1/2 transition-opacity ${getLabelOpacity(
-              "professional"
-            )}`}
-          >
-            Professional
-          </span>
-          <span
-            className={`absolute bottom-3 left-1/2 transform -translate-x-1/2 transition-opacity ${getLabelOpacity(
-              "casual"
-            )}`}
-          >
-            Casual
-          </span>
-          <span
-            className={`absolute left-3 top-1/2 transform -translate-y-1/2 -rotate-90 transition-opacity ${getLabelOpacity(
-              "concise"
-            )}`}
-          >
-            Concise
-          </span>
-          <span
-            className={`absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 transition-opacity ${getLabelOpacity(
-              "expanded"
-            )}`}
-          >
-            Expanded
-          </span>
-          {isInCenterCell() && (
+        {/* Labels */}
+        <div className="absolute inset-0 text-xs font-medium text-slate-300 flex items-center justify-center pointer-events-none">
+          <span className={`absolute top-3 left-1/2 transform -translate-x-1/2 ${getLabelOpacity("professional")}`}>Professional</span>
+          <span className={`absolute bottom-3 left-1/2 transform -translate-x-1/2 ${getLabelOpacity("casual")}`}>Casual</span>
+          <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 -rotate-90 ${getLabelOpacity("concise")}`}>Concise</span>
+          <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 ${getLabelOpacity("expanded")}`}>Expanded</span>
+          {/* Reset badge when not center */}
+          {!getQuadrantHighlight("center") && (
             <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-700 px-3 py-1 rounded-full text-white text-xs font-medium">
               Reset Tones
             </span>
           )}
         </div>
-        
+        {/* Draggable marker */}
         <div
-          className={`absolute w-6 h-6 rounded-full ${
-            isInCenterCell() ? "bg-slate-500 shadow-slate-500/50" : "bg-indigo-500 shadow-indigo-500/50"
-          } transform -translate-x-1/2 -translate-y-1/2 pointer-events-none shadow-lg transition-all duration-300 ease-in-out outline outline-2 outline-white/30`}
+          className={`absolute w-6 h-6 rounded-full ${getQuadrantHighlight("center")
+            ? "bg-slate-500 shadow-slate-500/50"
+            : "bg-indigo-500 shadow-indigo-500/50"
+            } transform -translate-x-1/2 -translate-y-1/2 pointer-events-none shadow-lg transition-all duration-300 ease-in-out outline outline-2 outline-white/30`}
           style={{ left: `${position.x}%`, top: `${position.y}%` }}
         />
       </div>

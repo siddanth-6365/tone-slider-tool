@@ -1,4 +1,4 @@
-import create from "zustand";
+import {create} from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface Tone {
@@ -41,7 +41,6 @@ const useToneStore = create<ToneState>()(
 
       setInputText: (text) => {
         const { history, historyIndex } = get();
-        // Drop future history if writing new input after undo
         const newHistory =
           historyIndex < history.length - 1
             ? history.slice(0, historyIndex + 1)
@@ -70,7 +69,6 @@ const useToneStore = create<ToneState>()(
       setOutputText: (output) => {
         const { inputText, tones, history, historyIndex } = get();
         
-        // Only create a new history entry if there's actual content
         if (inputText.trim() && output.trim()) {
           const newRev = { input: inputText, output, tones };
           const baseHistory =

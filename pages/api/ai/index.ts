@@ -42,7 +42,7 @@ export default async function handler(
         { role: "user", content: userMessage },
       ],
     });
-  
+
     const generated = result.choices?.[0]?.message.content ?? "";
     return res.status(200).json({ text: generated });
   } catch (error) {
