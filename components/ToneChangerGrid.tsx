@@ -6,28 +6,23 @@ const ToneChangerGrid = ({ onToneChange }) => {
   const [position, setPosition] = useState({ x: 50, y: 50 });
   const [isDragging, setIsDragging] = useState(false);
 
-  // Initialize position based on stored tones
   useEffect(() => {
     if (tones.length > 0) {
-      // Find the expanded and casual weights to determine position
       const expandedTone = tones.find(t => t.tone === "expanded");
       const casualTone = tones.find(t => t.tone === "casual");
       
       const expandedWeight = expandedTone ? expandedTone.weight : 0;
       const casualWeight = casualTone ? casualTone.weight : 0;
       
-      // Only update if we have valid weights
       if (expandedWeight > 0 || casualWeight > 0) {
         setPosition({
           x: expandedWeight * 100,
           y: casualWeight * 100
         });
       } else if (tones.length === 0) {
-        // Reset to center if no tones
         setPosition({ x: 50, y: 50 });
       }
     } else {
-      // Reset to center if no tones
       setPosition({ x: 50, y: 50 });
     }
   }, [tones]);
