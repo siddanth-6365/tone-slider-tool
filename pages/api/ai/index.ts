@@ -24,7 +24,6 @@ export default async function handler(
     return res.status(400).json({ error: "Missing text or tones array" });
   }
 
-  // Build prompts server-side
   const toneList = tones
     .map((t) => `${t.tone} (weight: ${t.weight})`)
     .join(" and ");
@@ -43,8 +42,7 @@ export default async function handler(
         { role: "user", content: userMessage },
       ],
     });
-    console.log("backend api response:", result);
-    // Extract generated text
+  
     const generated = result.choices?.[0]?.message.content ?? "";
     return res.status(200).json({ text: generated });
   } catch (error) {
